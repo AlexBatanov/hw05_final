@@ -4,7 +4,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.cache import cache
 
-from ..models import Post, User, Group, Comment, Follow
+from ..models import Post, User, Group, Follow
 from ..forms import PostForm
 from .test_forms import TEMP_MEDIA_ROOT
 from .create_image import new_image
@@ -125,7 +125,17 @@ class PostPagesTests(TestCase):
 
         self.cheking_attributes(first_object)
 
-        self.assertEqual(response.context['author'], self.post.author)
+        post_text = {
+            first_object.author_id: self.post.author.id,
+            first_object.pub_date: self.post.pub_date,
+            first_object.text: self.post.text,
+            first_object.id: self.post.id,
+            first_object.group_id: self.group.id,
+            first_object.image: self.post.image
+        }
+
+        for field, value in post_text.items():
+            self.assertEqual(field, value)
 
     def test_post_detail_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
@@ -135,9 +145,20 @@ class PostPagesTests(TestCase):
         )
 
         first_object = response.context['post']
-        self.assertEqual(self.post, first_object)
 
         self.cheking_attributes(first_object)
+
+        post_text = {
+            first_object.author_id: self.post.author.id,
+            first_object.pub_date: self.post.pub_date,
+            first_object.text: self.post.text,
+            first_object.id: self.post.id,
+            first_object.group_id: self.group.id,
+            first_object.image: self.post.image
+        }
+
+        for field, value in post_text.items():
+            self.assertEqual(field, value)
 
     def test_post_create_show_correct_context(self):
         """Шаблон post_create сформирован с правильным контекстом."""
@@ -210,23 +231,6 @@ class PostPagesTests(TestCase):
                 posts = response.context['page_obj']
                 self.assertNotIn(post, posts)
 
-    def test_added_comment(self):
-        '''Корретное добовления нового комментария'''
-
-        comment = Comment.objects.create(
-            text='test comment',
-            author=self.user,
-            post=self.post
-        )
-
-        response = self.authorized_client.get(
-            reverse('posts:post_detail',
-                    kwargs={'post_id': self.post.id})
-        )
-
-        comments = response.context['comments']
-        self.assertIn(comment, comments)
-
     def test_cahe(self):
         """Корректная работа кеша"""
 
@@ -235,12 +239,18 @@ class PostPagesTests(TestCase):
         new_response = self.client.get(reverse('posts:index'))
         self.assertEqual(response.content, new_response.content)
 
+        cache.clear()
+        new_response = self.client.get(reverse('posts:index'))
+        self.assertNotEqual(response.content, new_response.content)
+
     def test_subscriptions_per_user(self):
         """Корректная подписка на других пользователей"""
 
         user = User.objects.create_user(username='authnew')
         authorized_client = Client()
         authorized_client.force_login(user)
+
+        old_subscriptions = Follow.objects.all().count()
 
         authorized_client.get(
             reverse(
@@ -249,12 +259,46 @@ class PostPagesTests(TestCase):
             )
         )
 
-        response = authorized_client.get(reverse('posts:follow_index'))
-        posts = response.context['page_obj'].object_list
-        self.assertIn(self.post, posts)
+        subscription = Follow.objects.all()
+
+        self.assertEqual(old_subscriptions + 1, len(subscription))
+
+        users = {
+            subscription[0].user: user,
+            subscription[0].author: self.user
+        }
+
+        for user, author in users.items():
+            self.assertEqual(user, author)
 
     def test_unsubscribe_per_user(self):
         """Корректная отписка от пользователя"""
+
+        user = User.objects.create_user(username='auth_new')
+        authorized_client = Client()
+        authorized_client.force_login(user)
+
+        subscription = Follow.objects.create(
+            user=user,
+            author=self.user
+        )
+
+        count_subscrip = Follow.objects.all().count()
+
+        authorized_client.get(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': f'{self.user.username}'}
+            )
+        )
+
+        subscriptions = Follow.objects.all()
+
+        self.assertNotIn(subscription, subscriptions)
+        self.assertEqual(count_subscrip - 1, len(subscriptions))
+
+    def test_subscriber_has_new_post(self):
+        """Корректное отображение нового поста у подписчика"""
 
         user = User.objects.create_user(username='auth_new')
         authorized_client = Client()
@@ -264,47 +308,10 @@ class PostPagesTests(TestCase):
             user=user,
             author=self.user
         )
-
-        authorized_client.get(
-            reverse(
-                'posts:profile_unfollow',
-                kwargs={'username': f'{self.user.username}'}
-            )
-        )
-
         response = authorized_client.get(reverse('posts:follow_index'))
-        posts = response.context['page_obj']
-        self.assertNotIn(self.post, posts)
+        self.assertIn(self.post, response.context['page_obj'])
 
-    def test_subscriber_has_new_post(self):
-        """Корректное отображение нового поста у подписчика"""
-
-        user = User.objects.create_user(username='auth_new')
-        authorized_client = Client()
-        authorized_client.force_login(user)
-
-        authorized_client.get(
-            reverse(
-                'posts:profile_follow',
-                kwargs={'username': f'{self.user.username}'}
-            )
-        )
-
-        response = authorized_client.get(reverse('posts:follow_index'))
-        old_count_post = len(response.context['page_obj'].object_list)
-
-        Post.objects.create(
-            text='Тестовый текст 2',
-            author=self.user,
-            group=self.group
-        )
-
-        response = authorized_client.get(reverse('posts:follow_index'))
-        new_count_post = len(response.context['page_obj'].object_list)
-
-        self.assertEquals(old_count_post + 1, new_count_post)
-
-    def test_subscriber_has_new_post(self):
+    def test_not_subscriber_has_new_post(self):
         """Корректное не отображение нового поста у тех кто не подписан"""
 
         user = User.objects.create_user(username='auth_new')
@@ -318,5 +325,5 @@ class PostPagesTests(TestCase):
         )
 
         response = authorized_client.get(reverse('posts:follow_index'))
-        posts = response.context['page_obj'].object_list
+        posts = response.context['page_obj']
         self.assertNotIn(post, posts)

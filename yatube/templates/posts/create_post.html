@@ -20,45 +20,13 @@
                 {% endif %}
               </div>
               <div class="card-body">
-                {% if form.errors %}
-                  {% for field in form %}
-                    {% for error in field.errors %}
-                      <div class="alert alert-danger">
-                        {{ error|escape }}
-                      </div>
-                    {% endfor %}
-                  {% endfor %}
-                  {% for error in form.non_field_errors %}
-                    <div class="alert alert-danger">
-                      {{ error|escape }}
-                    </div>
-                  {% endfor %}
-                {% endif %}
-                  <form method="post" enctype="multipart/form-data">
+                {% include 'includes/form_errors.html' %}
                 {% if is_edit %}
                   <form method="post" action="{% url 'posts:post_edit' form.instance.id %}">
                 {% else %}
                   <form method="post" action="{% url 'posts:post_create' %}">
                 {% endif %}
-                  {% for field in form %}
-                    <div class="form-group row my-3">
-                      <label for="{{ field.id_for_label }}">
-                      {{ field.label }}
-                        {% if field.field.required %}
-                          <span class="required text-danger">*</span>
-                        {% endif %}
-                      </label>
-                      {{ field }}
-                      {% if field.help_text %}
-                        <small
-                           id="{{ field.id_for_label }}-help"
-                           class="form-text text-muted"
-                        >
-                          {{ field.help_text|safe }}
-                        </small>
-                      {% endif %}
-                    </div>
-                  {% endfor %}
+                {% include 'includes/for_form.html' %}
                   <div class="d-flex justify-content-end">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary">

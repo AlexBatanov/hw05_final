@@ -6,11 +6,11 @@ from django.urls import reverse
 from django.test import TestCase, Client
 from django.conf import settings
 
-
-from ..models import Post, Group, User
+from ..models import Post, Group, User, Comment
 from .create_image import new_image
 
 COUNT_NEW_POST = 1
+COUNT_NEW_COMMENT = 1
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
@@ -59,19 +59,19 @@ class PostCreateFormTests(TestCase):
             follow=True
         )
 
-        post = list(set(Post.objects.all()).difference(posts))
+        posts = list(set(Post.objects.all()).difference(posts))
 
-        self.assertEqual(len(post), COUNT_NEW_POST)
+        self.assertEqual(len(posts), COUNT_NEW_POST)
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
         new_post = response.context['page_obj'].object_list[0]
         post_text = {
-            post[0].author: new_post.author,
-            post[0].group: new_post.group,
-            post[0].pub_date: new_post.pub_date,
-            post[0].text: new_post.text,
-            post[0].id: new_post.id,
-            post[0].image: new_post.image,
+            posts[0].author: new_post.author,
+            posts[0].group: new_post.group,
+            posts[0].pub_date: new_post.pub_date,
+            posts[0].text: new_post.text,
+            posts[0].id: new_post.id,
+            posts[0].image: new_post.image,
         }
 
         for field, value in post_text.items():
@@ -89,7 +89,8 @@ class PostCreateFormTests(TestCase):
 
         form_data = {
             'text': 'Текст записанный в форму',
-            'group': group.id
+            'group': group.id,
+            'iamge': new_image()
         }
 
         self.authorized_client.post(
@@ -106,3 +107,38 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(edit_post.text, form_data['text'])
         self.assertEqual(edit_post.group.id, form_data['group'])
         self.assertEqual(edit_post.author, self.post.author)
+
+    def test_create_comment(self):
+        '''Проверка создания комментария'''
+
+        comments = set(Comment.objects.all())
+
+        form_data = {
+            'text': 'Комментарий записанный в форму',
+            'author': self.user,
+            'post': self.post
+        }
+
+        response = self.authorized_client.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=form_data,
+            follow=True
+        )
+
+        comments = list(set(Comment.objects.all()).difference(comments))
+
+        self.assertEqual(len(comments), COUNT_NEW_COMMENT)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        new_comment = response.context['comments'][0]
+
+        comment_text = {
+            comments[0].author_id: new_comment.author.id,
+            comments[0].created: new_comment.created,
+            comments[0].text: new_comment.text,
+            comments[0].id: new_comment.id,
+            comments[0].post_id: new_comment.post.id,
+        }
+
+        for field, value in comment_text.items():
+            self.assertEqual(field, value)

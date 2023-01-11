@@ -49,9 +49,9 @@ def profile(request, username):
 
     following = False
     if request.user.is_authenticated:
-        following = bool(
-            Follow.objects.filter(user=request.user).filter(author=author)
-        )
+        following = Follow.objects.filter(
+            user=request.user,
+            author=author).exists()
 
     context = {
         'author': author,
@@ -92,12 +92,11 @@ def post_create(request):
     form = PostForm(request.POST or None)
 
     if form.is_valid():
-        user = request.user
         post = form.save(commit=False)
-        post.author = user
+        post.author = request.user
         post.save()
 
-        return redirect('posts:profile', user)
+        return redirect('posts:profile', request.user)
 
     context = {
         'form': form,
@@ -156,11 +155,7 @@ def add_comment(request, post_id):
 def follow_index(request):
     user = get_object_or_404(User, pk=request.user.id)
 
-    authors = []
-    for follow in Follow.objects.filter(user=user):
-        authors.append(follow.author)
-
-    posts = Post.objects.filter(author__in=authors)
+    posts = Post.objects.filter(author__following__user=user)
 
     context = {
         'page_obj': get_page_obj(request, posts, POSTS_LIMIT),
@@ -172,7 +167,7 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    follow = Follow.objects.filter(user=request.user).filter(author=author)
+    follow = Follow.objects.filter(user=request.user, author=author)
 
     if not follow:
         if not request.user.username == username:
@@ -186,6 +181,8 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
-    author = User.objects.get(username=username)
-    Follow.objects.filter(user=request.user).filter(author=author).delete()
+    Follow.objects.filter(
+        user=request.user,
+        author__username=username).delete()
+
     return redirect('posts:follow_index')

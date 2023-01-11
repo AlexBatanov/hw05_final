@@ -54,23 +54,24 @@ class PostsURLTests(TestCase):
 
         templates_url_names = {
             reverse('posts:post_edit', kwargs={'post_id': self.post.pk}):
-                '/auth/login/?next='
+                reverse('users:login') + '?next='
                 + reverse('posts:post_edit', kwargs={'post_id': self.post.pk}),
             reverse('posts:post_create'):
-                '/auth/login/?next=' + reverse('posts:post_create'),
+                reverse('users:login') + '?next='
+                + reverse('posts:post_create'),
             reverse('posts:add_comment',
                     kwargs={'post_id': self.post.pk}):
-                        '/auth/login/?next='
+                        reverse('users:login') + '?next='
                         + reverse('posts:add_comment',
                                   kwargs={'post_id': self.post.pk}),
             reverse('posts:profile_follow',
                     kwargs={'username': self.user.username}):
-                        '/auth/login/?next='
+                        reverse('users:login') + '?next='
                         + reverse('posts:profile_follow',
                                   kwargs={'username': self.user.username}),
             reverse('posts:profile_unfollow',
                     kwargs={'username': self.user.username}):
-                        '/auth/login/?next='
+                        reverse('users:login') + '?next='
                         + reverse('posts:profile_unfollow',
                                   kwargs={'username': self.user.username})
         }

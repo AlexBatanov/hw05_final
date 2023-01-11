@@ -124,11 +124,22 @@ class Follow(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='follower'
+        related_name='follower',
+        verbose_name='Пользоваетль'
     )
 
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='following'
+        related_name='following',
+        verbose_name='Подписчик'
     )
+
+    models.UniqueConstraint(fields=['user', 'author'], name='unique')
+
+    class Meta:
+        verbose_name = 'Подписки'
+        verbose_name_plural = 'Подписчики'
+
+    def __str__(self) -> str:
+        return f'{self.user.username} - {self.author.username}'
