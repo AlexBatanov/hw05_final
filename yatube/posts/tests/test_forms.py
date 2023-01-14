@@ -7,7 +7,7 @@ from django.test import TestCase, Client
 from django.conf import settings
 
 from ..models import Post, Group, User, Comment
-from .create_image import new_image
+from .helpers import new_image
 
 COUNT_NEW_POST = 1
 COUNT_NEW_COMMENT = 1
@@ -115,8 +115,6 @@ class PostCreateFormTests(TestCase):
 
         form_data = {
             'text': 'Комментарий записанный в форму',
-            'author': self.user,
-            'post': self.post
         }
 
         response = self.authorized_client.post(

@@ -15,7 +15,7 @@
     <img class="card-img my-2" src="{{ im.url }}">
   {% endthumbnail %}
   <p>{{ post.text|linebreaks }}</p>
-  {% if post.group and not request.resolver_match.url_name == "group" %}
+  {% if post.group and not group %}
     <a href="{% url 'posts:group' post.group.slug %}">все записи группы</a>
     <br>
   {% endif %}

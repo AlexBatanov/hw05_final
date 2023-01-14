@@ -47,16 +47,16 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = Post.objects.filter(author=author)
 
-    following = False
+    is_following = False
     if request.user.is_authenticated:
-        following = Follow.objects.filter(
+        is_following = Follow.objects.filter(
             user=request.user,
             author=author).exists()
 
     context = {
         'author': author,
         'page_obj': get_page_obj(request, posts, POSTS_LIMIT),
-        'following': following
+        'following': is_following
     }
 
     return render(request, 'posts/profile.html', context)
@@ -167,13 +167,15 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    follow = Follow.objects.filter(user=request.user, author=author)
+    is_subscription = Follow.objects.filter(
+        user=request.user,
+        author=author).exists()
 
-    if not follow:
+    if not is_subscription:
         if not request.user.username == username:
             Follow.objects.create(
                 user=request.user,
-                author=User.objects.get(username=username)
+                author=author
             )
 
     return redirect('posts:follow_index')
