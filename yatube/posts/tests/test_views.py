@@ -152,7 +152,6 @@ class PostPagesTests(TestCase):
         )
         self.assertEqual(response.context['following'], True)
 
-
     def test_post_detail_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
 
@@ -302,7 +301,9 @@ class PostPagesTests(TestCase):
             author=self.user
         )
 
-        response = self.new_authorized_client.get(reverse('posts:follow_index'))
+        response = self.new_authorized_client.get(
+            reverse('posts:follow_index')
+        )
         self.assertIn(self.post, response.context['page_obj'])
 
     def test_not_subscriber_has_new_post(self):
@@ -314,6 +315,8 @@ class PostPagesTests(TestCase):
             group=self.group
         )
 
-        response = self.new_authorized_client.get(reverse('posts:follow_index'))
+        response = self.new_authorized_client.get(
+            reverse('posts:follow_index')
+        )
         posts = response.context['page_obj']
         self.assertNotIn(post, posts)
