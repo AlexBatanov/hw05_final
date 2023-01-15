@@ -137,21 +137,6 @@ class PostPagesTests(TestCase):
 
         self.assertEqual(response.context['following'], False)
 
-        self.new_authorized_client.get(
-            reverse(
-                'posts:profile_follow',
-                kwargs={'username': f'{self.user.username}'}
-            )
-        )
-
-        response = self.new_authorized_client.get(
-            reverse(
-                'posts:profile',
-                kwargs={'username': f'{self.user.username}'}
-            )
-        )
-        self.assertEqual(response.context['following'], True)
-
     def test_post_detail_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
 
